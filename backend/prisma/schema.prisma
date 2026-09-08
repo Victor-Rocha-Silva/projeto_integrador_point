@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CANDIDATO
+  EMPRESA
+}
+
+enum StatusVaga {
+  ABERTA
+  ENCERRADA
+  PENDENTE
+}
+
+enum StatusCandidatura {
+  ENVIADA
+  EM_ANALISE
+  APROVADA
+  RECUSADA
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  googleId  String   @unique
+  avatarUrl String?
+  role      Role     @default(CANDIDATO)
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+
+  perfilCandidato PerfilCandidato?
+  empresa         Empresa?
+  candidaturas    Candidatura[]
+}
+
+model PerfilCandidato {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  telefone    String?
+  resumo      String?
+  linkedin    String?
+  github      String?
+  curriculoUrl String?
+
+  habilidades PerfilHabilidade[]
+}
+
+model Habilidade {
+  id   String @id @default(uuid())
+  nome String @unique
+
+  perfis PerfilHabilidade[]
+}
+
+model PerfilHabilidade {
+  id           String          @id @default(uuid())
+  perfilId     String
+  perfil       PerfilCandidato @relation(fields: [perfilId], references: [id])
+  habilidadeId String
+  habilidade   Habilidade      @relation(fields: [habilidadeId], references: [id])
+  nivel        String
+
+  @@unique([perfilId, habilidadeId])
+}
+
+model Empresa {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  razaoSocial String
+  cnpj        String   @unique
+  descricao   String?
+  aprovado    Boolean  @default(false)
+  criadoEm    DateTime @default(now())
+
+  vagas Vaga[]
+}
+
+model Vaga {
+  id          String     @id @default(uuid())
+  titulo      String
+  descricao   String
+  requisitos  String
+  status      StatusVaga @default(PENDENTE)
+  empresaId   String
+  empresa     Empresa    @relation(fields: [empresaId], references: [id])
+  criadoEm    DateTime   @default(now())
+
+  candidaturas Candidatura[]
+}
+
+model Candidatura {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  vagaId          String
+  vaga            Vaga              @relation(fields: [vagaId], references: [id])
+  status          StatusCandidatura @default(ENVIADA)
+  dataCandidatura DateTime          @default(now())
+
+  @@unique([userId, vagaId])
+}
